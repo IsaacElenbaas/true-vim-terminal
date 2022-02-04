@@ -1,0 +1,3 @@
+#!/bin/bash
+
+HOME="${BASH_SOURCE[0]%/*}" xterm -e "${BASH_SOURCE[0]%/*}/shell" "$@"

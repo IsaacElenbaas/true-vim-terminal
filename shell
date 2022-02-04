@@ -1,0 +1,11 @@
+#!/bin/bash
+
+vim -c 'noswapfile call term_start(["zsh", "-l"'"$(
+	for i in "$@"; do
+		printf ", \""
+		i="${i//\\/\\\\}"
+		i="${i//\"/\\\"}"
+		printf "%s" "$i"
+		printf "\""
+	done
+)"'], {"term_finish":"close", "curwin":1, "norestore":1})'

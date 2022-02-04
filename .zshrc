@@ -1,0 +1,1 @@
+true-vim-terminal.plugin.zsh
