@@ -1,1 +1,1 @@
-true_vim_terminal.vim
+plugin/true_vim_terminal.vim
