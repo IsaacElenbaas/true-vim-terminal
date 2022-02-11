@@ -1,4 +1,6 @@
-#!/bin/zsh
+#!/usr/bin/zsh
+
+[ -z "$TVT_DEMO" ] || PROMPT="[TVT Demo %~]%(!.#.$) "
 
 # this CANNOT be ^W
 # vim really hates passing it through consistently
@@ -12,6 +14,8 @@
 # how long to sleep to let vim get new content in 10ms increments
 # can be modified on-the-fly
 #TVT_REDRAW_SLEEP=1
+
+[ -n "$VIM_TERMINAL" ] && {
 
 #{{{ tvt.tapi_feedkeys()
 # don't use the x flag, it breaks things with terminal mode
@@ -87,7 +91,7 @@ tvt.escape() {
 					break
 				;;
 				2) # set or [inc/dec]rement cursor position
-					[[ "${action:0:1}" =~ [+-] ]] && CURSOR=$(($CURSOR$action)) || CURSOR="$action"
+					[[ "${action:0:1}" =~ [+-] ]] && CURSOR=$(($CURSOR$action)) || CURSOR=$action
 				;;
 				3) # set LBUFFER
 					LBUFFER="$action"
@@ -143,3 +147,4 @@ if [ "${TVT_DELIMITER#*[!0-9]}" = "$TVT_DELIMITER" ]; then
 else
 	printf "\nTVT_DELIMITER is not a positive integer!" >&2
 fi
+}

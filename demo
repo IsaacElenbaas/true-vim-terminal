@@ -1,3 +1,10 @@
-#!/bin/bash
+#!/usr/bin/bash
 
-HOME="${BASH_SOURCE[0]%/*}" xterm -e "${BASH_SOURCE[0]%/*}/shell" "$@"
+command -v zsh &>/dev/null || TVT_DEMO="bash"
+while ! [ -n "$TVT_DEMO" ]; do
+	read -p "Would you like to demo in bash or zsh? " TVT_DEMO
+	printf "\033[A\033[K"
+	[[ "$TVT_DEMO" =~ ^(ba|z)sh$ ]] || TVT_DEMO=
+done
+export TVT_DEMO
+HOME="$(realpath "${BASH_SOURCE[0]%/*}")" xterm -e "${BASH_SOURCE[0]%/*}/shell" "$@"

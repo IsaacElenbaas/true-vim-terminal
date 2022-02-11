@@ -1,6 +1,9 @@
 if !exists("g:TrueVimTerm_prompt_regex")
 	let g:TrueVimTerm_prompt_regex='^\S*\s*'
 endif
+if $TVT_DEMO != ""
+	let g:TrueVimTerm_prompt_regex='^\[TVT[^\]]*\].\s'
+endif
 
 "{{{ Tapi_TVT_Delimiter()
 function Tapi_TVT_Delimiter(bufnum, arglist)
@@ -136,19 +139,19 @@ try
 	"{{{ reserve columns
 		" reserve columns for numbers, two for signs, and onemore
 		" may be removed after #8365
-		execute "setlocal termwinsize=0x" . (winwidth("%")-(
+		execute "setlocal termwinsize=0x" . (winwidth(bufwinid(a:buf))-(
 			\ ((&number || &relativenumber) ? min([2, &numberwidth]) : 0)+
 			\ 2+
 			\ ((match(&virtualedit, 'onemore') != -1) ? 1 : 0)
 		\ ))
-		augroup TrueVimTerm_Resize
-			autocmd!
-			autocmd VimResized * execute "setlocal termwinsize=0x" . (winwidth("%")-(
-				\ ((&number || &relativenumber) ? min([2, &numberwidth]) : 0)+
-				\ 2+
-				\ ((match(&virtualedit, 'onemore') != -1) ? 1 : 0)
-			\ ))
-		augroup END
+		execute "augroup TrueVimTerm_Resize" . a:buf . " | " .
+			\ "autocmd!" . " | " .
+			\ "autocmd VimResized * execute \"setlocal termwinsize=0x\" . (winwidth(bufwinid(" . a:buf . "))-(" .
+				\ "((&number || &relativenumber) ? min([2, &numberwidth]) : 0)+" .
+				\ "2+" .
+				\ "((match(&virtualedit, 'onemore') != -1) ? 1 : 0)" .
+			\ "))"
+		augroup END"
 	"}}}
 
 		" no tmaps so only if new
@@ -265,7 +268,7 @@ endfunc
 
 augroup TrueVimTerm
 	autocmd!
-	autocmd TerminalOpen * call TrueVimTerm_Start(expand("<abuf>"), 1)
+	autocmd TerminalOpen * call TrueVimTerm_Start(term_list()[-1], 1)
 	autocmd VimEnter * call Tapi_TVT_Send(0, [0, "\033]51;", '["call","Tapi_TVT_Paste",[]]',   "\007"])
 	autocmd VimLeave * call Tapi_TVT_Send(0, [0, "\033]51;", '["call","Tapi_TVT_NoPaste",[]]', "\007"])
 augroup END
