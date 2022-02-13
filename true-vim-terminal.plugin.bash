@@ -1,6 +1,6 @@
 #!/usr/bin/bash
 
-[ -z "$TVT_DEMO" ] || PS1="[TVT Demo \\W]\\$ "
+{ [ -z "$TVT_DEMO" ] && [ -z "$TVT_TEST" ]; } || PS1="[TVT Demo \\W]\\$ "
 
 # this CANNOT be ^W
 # vim really hates passing it through consistently
@@ -30,6 +30,7 @@
 
 #{{{ tvt.escape()
 tvt.escape() {
+	[ -z "$TVT_TEST" ] || printf -- "-\n" >&4
 	local REPLY
 	local LBUFFER
 	local RBUFFER
@@ -57,13 +58,20 @@ tvt.escape() {
 	[ "${TVT_DRAW_SLEEP::1}" != "." ] || TVT_DRAW_SLEEP="0$TVT_DRAW_SLEEP"
 	#}}}
 
-	printf "${PS1@P}$LBUFFER"
-	printf "\033[6n"
-	IFS= read -r -d "R"
-	printf "$RBUFFER${REPLY}H"
+	# no terminal to answer these prompts in tests
+	[ -z "$TVT_TEST" ] && {
+		printf "${PS1@P}$LBUFFER"
+		printf "\033[6n"
+		IFS= read -r -d "R"
+		printf "$RBUFFER${REPLY}H"
+	# test buffers must be lower than width, though, which we can use
+	} || printf "\r\033[K${PS1@P}$LBUFFER$RBUFFER\r${PS1@P}$LBUFFER"
 	while true; do
 		sleep $TVT_DRAW_SLEEP
-		printf '\033]51;["call","Tapi_TVT_Escape",[%d]]\007' "$TVT_REDRAW_SLEEP"
+		[ -z "$TVT_TEST" ] && printf '\033]51;["call","Tapi_TVT_Escape",[%d]]\007' "$TVT_REDRAW_SLEEP"
+		# adding this makes vim add a new line and I don't know why
+		# it has zero effect here anyway, only necessary in zsh
+		#sleep $TVT_REDRAW_SLEEP_HERE
 		REPLY=
 		while IFS= read -r -d "$TVT_DELIMITER" action; do
 			REPLY="$REPLY$action$TVT_DELIMITER"
@@ -80,6 +88,7 @@ tvt.escape() {
 					printf "\r\033[K"
 					READLINE_LINE="$LBUFFER$RBUFFER"
 					[ "${BASH_VERSION::1}" != "4" ] && READLINE_POINT="${#LBUFFER}" || READLINE_POINT=$(printf "%s" "$LBUFFER" | wc -c)
+					[ -z "$TVT_TEST" ] || printf -- "-\n" >&4
 					return
 				;;
 				2) # set or [inc/dec]rement cursor position
@@ -90,12 +99,17 @@ tvt.escape() {
 					RBUFFER="${READLINE_LINE:$READLINE_POINT}"
 				;&
 				1|2) # redraw
-					printf "\r\033[K${PS1@P}$LBUFFER"
-					printf "\033[6n"
-					IFS= read -r -d "R" <&3
-					printf "$RBUFFER${REPLY}H"
+					# no terminal to answer these prompts in tests
+					[ -z "$TVT_TEST" ] && {
+						printf "\r\033[K${PS1@P}$LBUFFER"
+						printf "\033[6n"
+						IFS= read -r -d "R" <&3
+						printf "$RBUFFER${REPLY}H"
+					# test buffers must be lower than width, though, which we can use
+					} || printf "\r\033[K${PS1@P}$LBUFFER$RBUFFER\r${PS1@P}$LBUFFER"
 				;;&
 				1) # done and go back to vim
+					[ -z "$TVT_TEST" ] || printf -- "-\n" >&4
 					break
 				;;
 				3) # set LBUFFER
@@ -113,7 +127,7 @@ tvt.escape() {
 			esac
 	#}}}
 
-		done <<< "$REPLY" 3<&1
+		done 3<&1 <<< "$REPLY"
 	done
 }
 #}}}

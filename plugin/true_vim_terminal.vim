@@ -1,7 +1,7 @@
 if !exists("g:TrueVimTerm_prompt_regex")
 	let g:TrueVimTerm_prompt_regex='^\S*\s*'
 endif
-if $TVT_DEMO != ""
+if $TVT_DEMO != "" || $TVT_TEST != ""
 	let g:TrueVimTerm_prompt_regex='^\[TVT[^\]]*\].\s'
 endif
 
@@ -16,7 +16,9 @@ function Tapi_TVT_Escape(bufnum, arglist)
 	if len(a:arglist) != 0 && a:arglist[0] != 0
 		call term_wait(bufnr("%"), a:arglist[0]*10)
 	endif
-	call feedkeys("\<c-w>N", "n")
+	if mode() == "t"
+		call feedkeys("\<c-w>N", "n")
+	endif
 endfunc
 "}}}
 

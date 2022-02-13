@@ -1,6 +1,6 @@
 #!/usr/bin/zsh
 
-[ -z "$TVT_DEMO" ] || PROMPT="[TVT Demo %~]%(!.#.$) "
+{ [ -z "$TVT_DEMO" ] && [ -z "$TVT_TEST" ]; } || PROMPT="[TVT Demo %~]%(!.#.$) "
 
 # this CANNOT be ^W
 # vim really hates passing it through consistently
@@ -46,6 +46,7 @@ zle -N tvt.read
 
 #{{{ tvt.escape()
 tvt.escape() {
+	[ -z "$TVT_TEST" ] || printf -- "-\n" >&4
 	local REPLY
 
 	#{{{ variable validation and parsing
@@ -70,8 +71,10 @@ tvt.escape() {
 	[ "${TVT_REDRAW_SLEEP_HERE:0:1}" != "." ] || TVT_REDRAW_SLEEP_HERE="0$TVT_REDRAW_SLEEP_HERE"
 	#}}}
 
-	printf '\033]51;["call","Tapi_TVT_Escape",[]]\007'
 	while true; do
+		sleep $TVT_DRAW_SLEEP
+		[ -z "$TVT_TEST" ] && printf '\033]51;["call","Tapi_TVT_Escape",[%d]]\007' "$TVT_REDRAW_SLEEP"
+		sleep $TVT_REDRAW_SLEEP_HERE
 		zle tvt.read || { zle reset-prompt; return 1; }
 		[ -n "$REPLY" ] || { zle reset-prompt; return 1; }
 		while IFS= read -r -d "$TVT_DELIMITER" action; do
@@ -83,11 +86,13 @@ tvt.escape() {
 				;|
 				0) # done and stay in shell
 					zle reset-prompt
+					[ -z "$TVT_TEST" ] || printf -- "-\n" >&4
 					return
 				;;
 				1) # done and go back to vim
 					zle reset-prompt
 					zle -R
+					[ -z "$TVT_TEST" ] || printf -- "-\n" >&4
 					break
 				;;
 				2) # set or [inc/dec]rement cursor position
@@ -113,9 +118,6 @@ tvt.escape() {
 	#}}}
 
 		done <<< "$REPLY"
-		sleep $TVT_DRAW_SLEEP
-		printf '\033]51;["call","Tapi_TVT_Escape",[%d]]\007' "$TVT_REDRAW_SLEEP"
-		sleep $TVT_REDRAW_SLEEP_HERE
 	done
 }
 zle -N tvt.escape

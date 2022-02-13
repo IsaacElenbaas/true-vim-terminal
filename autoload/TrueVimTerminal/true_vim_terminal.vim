@@ -5,7 +5,7 @@ function s:ParseLine(line, ...)
 		let l:visual=(a:1 == visualmode())
 		let l:left=(l:visual) ? "'<" : "'["
 		let l:right=(l:visual) ? "'>" : "']"
-		if line(l:left) != line(l:right) || line(l:left) != search(g:TrueVimTerm_prompt_regex . '\%(\_.\{-}\%$\)\@<=', "cnW")+1
+		if line(l:left) != line(l:right) || !(index([0, line(l:left)], search(g:TrueVimTerm_prompt_regex . '\%(\_.\{-}\%$\)\@<=', "cnW"))+1)
 			throw "[TVT] You can't do that here."
 		endif
 		let l:offset=len(a:line)-len(l:line)
