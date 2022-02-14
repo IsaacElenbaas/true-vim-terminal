@@ -1,0 +1,10 @@
+a*
+	testing
+^[
+# testin|g
+hhh
+# tes|ting
+a*
+	ing test
+^[
+# testing tes|ting

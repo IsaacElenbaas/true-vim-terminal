@@ -89,7 +89,7 @@ endfunc
 	"}}}
 
 	"{{{ r/R
-function TrueVimTerminal#true_vim_terminal#Replace(mode)
+function TrueVimTerminal#true_vim_terminal#Replace(mode, count)
 	let l:line=s:ParseLine(getline("."))
 	let l:key=getchar()
 	if type(l:key) != 0
@@ -99,7 +99,9 @@ function TrueVimTerminal#true_vim_terminal#Replace(mode)
 	call feedkeys("i", "nx")
 	call term_sendkeys(bufnr("%"),
 		\ "2" . (charcol(".")-l:line[0]) . g:TrueVimTerm_delimiter .
-		\ "3" . l:line[1][0:charcol(".")-l:line[0]-2] . nr2char(l:key) . g:TrueVimTerm_delimiter .
+		\ "3" . l:line[1][0:charcol(".")-l:line[0]-2] . repeat(nr2char(l:key), max([1, a:count])) . g:TrueVimTerm_delimiter .
+		\ "4" . l:line[1][charcol(".")-l:line[0]-1+max([1, a:count]):] . g:TrueVimTerm_delimiter .
+		\ "2" . "-1" . g:TrueVimTerm_delimiter .
 		\ "1" . g:TrueVimTerm_delimiter
 	\ )
 endfunc

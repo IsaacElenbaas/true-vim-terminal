@@ -218,6 +218,24 @@ for shell in "bash" "zsh"; do
 		i
 		d
 		i_2
+		I
+		a
+		a_2
+		A
+		c
+		cc
+		C
+		dd
+		D
+		p
+		P
+		r
+		r_2
+		s
+		s_2
+		S
+		x
+		x_2
 	__EOF__
 	#}}}
 

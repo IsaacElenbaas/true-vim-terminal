@@ -1,0 +1,10 @@
+i*
+	testBAD
+^[
+# testBA|D
+FB
+# test|BAD
+C*
+	ing
+^[
+# testin|g

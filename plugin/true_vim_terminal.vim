@@ -98,8 +98,8 @@ map <Plug>(TrueVimTerm_P) <Plug>TrueVimTerm_P
 	"}}}
 
 	"{{{ r/R
-nnoremap <silent> <script> <Plug>TrueVimTerm_r :<c-u>call TrueVimTerminal#true_vim_terminal#Replace("char")<CR>
-xnoremap <silent> <script> <Plug>TrueVimTerm_r :<c-u>call TrueVimTerminal#true_vim_terminal#Replace(visualmode())<CR>
+nnoremap <silent> <script> <Plug>TrueVimTerm_r :<c-u>call TrueVimTerminal#true_vim_terminal#Replace("char",v:count)<CR>
+xnoremap <silent> <script> <Plug>TrueVimTerm_r :<c-u>call TrueVimTerminal#true_vim_terminal#Replace(visualmode(),v:count)<CR>
 map <Plug>(TrueVimTerm_r) <Plug>TrueVimTerm_r
 " TODO
 "nnoremap <silent> <script> <Plug>TrueVimTerm_R :<c-u>call TrueVimTerminal#true_vim_terminal#Replace("recurse")<CR>
