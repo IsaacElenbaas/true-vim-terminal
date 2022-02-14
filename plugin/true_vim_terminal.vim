@@ -158,10 +158,14 @@ try
 
 		" no tmaps so only if new
 		if a:new
-			call TrueVimTerm_DefaultBinds()
+			call TrueVimTerm_Mappings()
 		endif
 		try
-			call TrueVimTerm_Binds()
+			call TrueVimTerm_Start_User(a:buf, a:new)
+		catch /^.*E117:.*/
+		endtry
+		try
+			call TrueVimTerm_Mappings_User()
 		catch /^.*E117:.*/
 		endtry
 	endfunc
@@ -169,8 +173,8 @@ catch /^.*E122:.*/
 endtry
 "}}}
 
-"{{{ TrueVimTerm_DefaultBinds()
-function! TrueVimTerm_DefaultBinds()
+"{{{ TrueVimTerm_Mappings()
+function! TrueVimTerm_Mappings()
 	setlocal termwinkey=
 
 	"{{{ a/A

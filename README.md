@@ -44,10 +44,12 @@ You can also run a demo by cloning and running `demo` (which also accepts `-c`)
 
 	In 10ms increments, defaults to 1
 ### vim
-* `TrueVimTerm_Start(buf, new)`: Overloadable function to set buffer variables for a better terminal experience and create buffer mappings
+* `TrueVimTerm_Start(buf, new)`: Overloadable function used to set buffer variables for a better terminal experience and create buffer mappings
 
 	`buf` contains the buffer number and `new` is a boolean representing whether the terminal buffer was just created (if it wasn't, normal mode mappings and most settings won't need to be re-set)
-* `TrueVimTerm_DefaultBinds()`: Should be called in `TrueVimTerm_Start` (unless you don't want the default vim binds)
+* `TrueVimTerm_Start_User(buf, new)`: Should be called in `TrueVimTerm_Start` overloads, used to define user customization without removing the defaults
+* `TrueVimTerm_Mappings()`: Overloadable function used to create default mappings
+* `TrueVimTerm_Mappings_User()`: Should be called in `TrueVimTerm_Start` overloads, used to define user mappings without removing the defaults
 ### Paste
 There are two functions, `Tapi_TVT_Paste` and `Tapi_TVT_NoPaste`, which are used to enter an entirely passthrough state. The former removes all terminal job mode mappings, and the latter calls `TrueVimTerm_Start` with `new=0`. These are automatically called upon entering a nested vim session.
 
