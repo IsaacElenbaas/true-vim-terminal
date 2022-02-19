@@ -239,11 +239,11 @@ endfunc
 "}}}
 
 "{{{ Tapi_TVT_Paste()
-function! Tapi_TVT_Paste(bufnum, arglist)
+function! Tapi_TVT_Paste(buf, arglist)
 	tnoremap <buffer> <expr> <c-w> (term_sendkeys(bufnr("%"), "\<c-w>"))?"":""
 	" may be removed after #8365
 	set termwinsize=
-	autocmd! TrueVimTerm_Resize
+	execute "autocmd! TrueVimTerm_Resize" . a:buf
 
 	"{{{ remove all terminal mappings
 	try
@@ -267,7 +267,7 @@ endfunc
 "}}}
 
 "{{{ Tapi_TVT_NoPaste()
-function! Tapi_TVT_NoPaste(bufnum, arglist)
+function! Tapi_TVT_NoPaste(buf, arglist)
 	call TrueVimTerm_Start(0)
 endfunc
 "}}}

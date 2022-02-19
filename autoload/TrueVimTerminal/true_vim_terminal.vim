@@ -8,7 +8,7 @@ function s:ParseLine(line, ...)
 		if line(l:left) != line(l:right) || !(index([0, line(l:left)], search(g:TrueVimTerm_prompt_regex . '\%(\_.\{-}\%$\)\@<=', "cnW"))+1)
 			throw "[TVT] You can't do that here."
 		endif
-		let l:offset=len(a:line)-len(l:line)
+		let l:offset=strcharlen(a:line)-strcharlen(l:line)
 		let l:left=max([0, charcol(l:left)-l:offset-1])
 		let l:right=charcol(l:right)-l:offset
 		let l:line=substitute(l:line, '\s*$', "", "")
@@ -19,7 +19,7 @@ function s:ParseLine(line, ...)
 			\ strcharpart(l:line, l:right)
 		\ ]
 	endif
-	return [len(a:line)-len(l:line), substitute(l:line, '\s*$', "", "")]
+	return [strcharlen(a:line)-strcharlen(l:line), substitute(l:line, '\s*$', "", "")]
 endfunc
 function TrueVimTerminal#true_vim_terminal#ParseLine(line, ...)
 	return call('s:ParseLine', [a:line] + a:000)
