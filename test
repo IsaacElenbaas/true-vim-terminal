@@ -68,6 +68,7 @@ send ":set columns=128"$'\n'
 
 cd "${BASH_SOURCE[0]%/*}/tests"
 for shell in "bash" "zsh"; do
+	command -v "$shell" &>/dev/null || continue
 
 #{{{ run tests
 	printf "With shell=\`$shell\`:\n" >&2
