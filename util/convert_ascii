@@ -1,0 +1,13 @@
+#!/usr/bin/bash
+
+# essentially cat -v but still prints escapes for usable combos cat -v doesn't
+
+od -A n -t o1 | while IFS= read -r -n 4 key; do
+	key="${key#${key%%[![:space:]]*}}"
+	key="${key#${key%%[!0]*}}"
+	[ -n "$key" ] || continue
+	{ [ $key -eq 12 ] || [ $key -eq 15 ]; } && { printf "\n"; continue; }
+	[ $key -eq 33 ] && { printf "^["; continue; }
+	[ $key -le 32 ] && { printf "^"; key=$(($key+100)); }
+	printf "\\$key"
+done

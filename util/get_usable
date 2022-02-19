@@ -1,0 +1,85 @@
+#!/usr/bin/bash
+
+export HOME="${BASH_SOURCE[0]%/*}/homes/${BASH_SOURCE[0]##*/}"
+export SHELL="/usr/bin/bash"
+
+#{{{ possible()
+possible() {
+	for (( i=1; i<=32; i++ )); do
+		case $i in
+			*8|*9) continue ;;
+			3|4|23|25|32) continue ;;
+		esac
+		printf "\\$i\n"
+	done
+}
+#}}}
+
+#{{{ convert possible to list of ascii sequences to bind
+list="$(
+	possible | while IFS= read -r key; do
+		case $key in
+			$'\026') printf "%s\n" "$key" | "${BASH_SOURCE[0]%/*}/convert_ascii"; continue; ;;
+			*) printf "%s\n" "$key"
+		esac
+	done | script -q -c "exec cat >&3" /dev/null 3>&1 &>/dev/null | "${BASH_SOURCE[0]%/*}/convert_ascii"
+)"
+list="$(printf "%s\n" "$list" | tr -s "\n")"
+#}}}
+
+#{{{ coproc setup
+coproc bash {
+	script -q -c 'exec bash --init-file "$HOME/.bashenv"' /dev/null 3>&1 &>/dev/null &
+	trap "sleep 1; kill -9 $! 2>/dev/null" SIGINT
+	wait $!
+}
+exec 3>&2 2>&-
+coproc zsh {
+	script -q -c 'exec zsh' /dev/null 3>&1 &>/dev/null &
+	trap "sleep 1; kill -9 $! 2>/dev/null" SIGINT
+	wait $!
+}
+exec 2>&3 3>&-
+IFS= read -r <&"${bash[0]}"
+IFS= read -r <&"${zsh[0]}"
+#}}}
+
+#{{{ create binds to return input combos
+{ # line editing is disabled in bash init files randomly
+	printf "set keyseq-timeout 100\n"
+	printf "KEYTIMEOUT=1\n" >&3
+	printf 'bind -x '\''"|":printf -- "-\\n" >&3; exit'\''\n'
+	printf "TVT_0() { printf -- \"-\\n\" >&3; exit; }; zle -N TVT_0\n" >&3
+	printf "bindkey \"|\" TVT_0\n" >&3
+	printf "TVT_1() { printf -- \"\$KEYS\\n\" >&3; }; zle -N TVT_1\n" >&3
+	while IFS= read -r key; do
+		key_orig="$key"
+		key="${key/^\[/\\033}"
+		key="${key/^/\\C-}"
+		printf 'bind -x '\''"%s":printf "%s\\n" >&3'\''\n' "$key" "$key_orig"
+		printf "bindkey \"%s\" TVT_1\n" "$key_orig" >&3
+	done <<< "$list"
+	printf "printf -- \"-\\n\" >&3\n"
+	printf "printf -- \"-\\n\" >&3\n" >&3
+} >&"${bash[1]}" 3>&"${zsh[1]}"
+IFS= read -r <&"${bash[0]}"
+IFS= read -r <&"${zsh[0]}"
+#}}}
+
+#{{{ get returned combos
+# piped-to processes are subshells and can't access coprocess file descriptors
+# really annoying and doesn't prevent bad code as I've demonstrated in the past it's easy to get around
+tr -d "\n" >&"${bash[1]}" < <(possible)
+tr -d "\n" >&"${zsh[1]}" < <(possible)
+# using dash here returns a ton of them for bash?
+printf "|" >&"${bash[1]}"
+printf "|" >&"${zsh[1]}"
+IFS= read -r -d "-" bash_list <&"${bash[0]}"
+IFS= read -r -d "-" zsh_list <&"${zsh[0]}"
+zsh_list="$("${BASH_SOURCE[0]%/*}/convert_ascii" <<< "$zsh_list")"$'\n'
+#}}}
+
+kill $bash_PID 2>/dev/null; kill $zsh_PID 2>/dev/null
+wait $bash_PID 2>/dev/null; wait $zsh_PID 2>/dev/null
+
+comm -12 <(printf "%s" "$bash_list") <(printf "%s" "$zsh_list")

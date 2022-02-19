@@ -1,0 +1,19 @@
+#!/usr/bin/bash
+
+# inverse of convert_ascii
+
+while IFS= read -r -n 1 key; do
+	[ -n "$key" ] || { printf "\n"; continue; }
+	[ "$key" = "^" ] && {
+		IFS= read -r -n 1 key || { printf "^"; break; }
+	} && {
+		[ "$key" != "[" ] || { printf "\033"; continue; }
+		key="$(printf "%s" "$key" | od -A n -t o1)"
+		key="${key#${key%%[![:space:]]*}}"
+		key="${key#${key%%[!0]*}}"
+		[ $key -ge 141 ] && key=$(($key-40))
+		printf "\\$((key-100))"
+		continue
+	}
+	printf "%s" "$key"
+done

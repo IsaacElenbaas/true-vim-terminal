@@ -1,18 +1,9 @@
 #!/usr/bin/bash
 
-[ -n "$TVT_DEMO" ] && {
+[ -z "$TVT_DEMO" ] || {
 	while true; do
-		IFS= read -r -p "Please type your desired 'escape to vim' bind: " TVT_ESCAPE
-		TVT_ESCAPE="$(
-			printf "%s" "$TVT_ESCAPE" | od -A n -t o1 | while read -n 4 key; do
-				key="${key#${key%%[![:space:]]*}}"
-				key="${key#${key%%[!0]*}}"
-				[ -n "$key" ] || continue
-				[ $key -eq 33 ] && { printf "^["; continue; }
-				[ $key -le 32 ] && { printf "^"; key=$(($key+100)); }
-				printf "\\$key"
-			done
-		)"
+		printf "Please type your desired 'escape to vim' bind: "
+		TVT_ESCAPE="$(head -n 1 | "${BASH_SOURCE[0]%/*}/util/convert_ascii")"
 		REPLY=
 		while ! [ -n "$REPLY" ]; do
 			read -p "Does $TVT_ESCAPE seem right? (y/n): "

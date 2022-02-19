@@ -1,6 +1,7 @@
 #!/usr/bin/bash
 
 command -v script &>/dev/null || { printf "These tests require the \`script\` utility!\n" >&2; exit 1; }
+[ ${BASH_VERSION::1} -ge 5 ] || { printf "These tests require \`bash\` 5 or later to use multiple coprocesses!\n" >&2; exit 1; }
 
 #{{{ coproc setup
 printf "Setting up vim processes. . . " >&2
@@ -8,7 +9,9 @@ export SHELL="/usr/bin/bash"
 
 coproc tvt {
 	export HOME="$(realpath "${BASH_SOURCE[0]%/*}")"
-	script -q -c 'TVT_TEST="-" vim -n -s /dev/fd/3 --not-a-term 4>&1 &>/dev/null' /dev/null 3<&0 < /dev/null 2>/dev/null
+	script -q -c 'TVT_TEST="-" vim -n -s /dev/fd/3 --not-a-term 4>&1 &>/dev/null' /dev/null 3<&0 < /dev/null 2>/dev/null &
+	trap "sleep 1; kill -9 $! 2>/dev/null" SIGINT
+	wait $!
 }
 actual="${tvt[0]}"
 actual_PID=$tvt_PID
@@ -19,6 +22,8 @@ exec 3>&2 2>&-
 coproc v {
 	export HOME="$(realpath "${BASH_SOURCE[0]%/*}")/tests"
 	script -q -c 'vim -n -s /dev/fd/3 --not-a-term 4>&1 &>/dev/null' /dev/null 3<&0 < /dev/null 2>/dev/null
+	trap "sleep 1; kill -9 $! 2>/dev/null" SIGINT
+	wait $!
 }
 exec 2>&3 3>&-
 expected="${v[0]}"
@@ -38,8 +43,7 @@ close() {
 	exec 2>&3 3>&-
 	{ kill -0 $actual_PID 2>/dev/null || kill -0 $expected_PID 2>/dev/null; } && {
 		kill $actual_PID 2>/dev/null; kill $expected_PID 2>/dev/null
-		sleep 1
-		kill -9 $actual_PID 2>/dev/null; kill -9 $expected_PID 2>/dev/null
+		wait $actual_PID 2>/dev/null; wait $expected_PID 2>/dev/null
 	}
 	[ -n "$1" ] && exit ${1#-}
 }
@@ -70,20 +74,22 @@ for shell in "bash" "zsh"; do
 
 	#{{{ true vim terminal setup and storing prompt
 		#{{{ setup and setting escape variables
+	printf "\tGetting a safe TVT_ESCAPE. . . " >&2
+	escape_ascii="$(../util/get_usable | head -n 1)"
+	escape_key="$(printf "%s" "$escape_ascii" | ../util/convert_key)"
+	printf "done\n" >&2
 	printf "\tStarting true vim terminal. . . " >&2
-	# ^X is about as safe of a key combo as you can get (it's a leader key)
-	# you would think at least *one* would be left alone, but they're *all* bound
-	escape_wait=$'\030'"t"
-	escape=$'\030'"n"
-	escape_force=$'\030'"f"
+	escape_wait="${escape_key}t"
+	escape="${escape_key}n"
+	escape_force="${escape_key}f"
 	# ordinarily vim would pass TVT_ESCAPE on to the terminal then check for more to do, which would make it block until there are further instructions
 	# the Tapi_TVT_Escape call wouldn't happen at all until certain instructions are sent (<c-w>N, sleep, term_wait)
 	# simplified and fixed by cancelling the Tapi_TVT_Escape call with TVT_TEST and doing it with this first mapping
 	# but to ensure Tapi_TVT_Escape is triggered after all keys are handled by terminal, use escape_wait and wait for terminal response due to TVT_TEST then use escape (instead of mapping this to TVT_ESCAPE<c-w>N)
-	printf ":tnoremap <c-x>n <c-w>N|" >&"$actual_in"
-	printf "nnoremap <c-x>f <Nop>|" >&"$actual_in"
-	printf "tnoremap <c-x>f <Space>(still in terminal job mode)<c-w>N:term_wait(term_list()[-1],1000)\n" >&"$actual_in"
-	printf ":let \$TVT_ESCAPE=\"^Xt\"\n" >&"$actual_in"
+	printf ":tnoremap \026${escape_key}n <c-w>N|" >&"$actual_in"
+	printf "nnoremap \026${escape_key}f <Nop>|" >&"$actual_in"
+	printf "tnoremap \026${escape_key}f <Space>(still in terminal job mode)<c-w>N:term_wait(term_list()[-1],1000)\n" >&"$actual_in"
+	printf ":let \$TVT_ESCAPE=\"${escape_ascii}t\"\n" >&"$actual_in"
 	printf ':call term_start(["'"$shell"'","-i"],{"term_rows":1,"curwin":1,"norestore":1})|' >&"$actual_in"
 	# x is fine here
 	printf 'call feedkeys("\<c-w>N","nx")\n' >&"$actual_in"
@@ -114,7 +120,7 @@ for shell in "bash" "zsh"; do
 
 	# cancelling insert above and sending shell vim escape down here because all shells draw funky things upon getting it
 	# the sleep is necessary for reasons and isn't a race condition
-	printf ":call term_sendkeys(term_list()[-1],\"\\<c-x>t\")|sleep 1m\n" >&"$actual_in"
+	printf ":call term_sendkeys(term_list()[-1],\"\026$escape_wait\")|sleep 1m\n" >&"$actual_in"
 	head -n 1 <&"$actual" > /dev/null
 	#}}}
 
