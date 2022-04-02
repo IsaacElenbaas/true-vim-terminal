@@ -18,14 +18,15 @@
 [ -n "$VIM_TERMINAL" ] && {
 
 #{{{ tvt.tapi_feedkeys()
-# don't use the x flag, it breaks things with terminal mode
-#tvt.tapi_feedkeys() {
-#	text="$1"
-#	text="${text//\\/\\\\\\\\}"
-#	text="${text//\\\\\\\\</\\\\<}"
-#	text="${text//\"/\\\\\\\"}"
-#	printf '\033]51;["call","Tapi_TVT_Feedkeys",["%s","%s"]]\007' "$text" "$2"
-#}
+tvt.tapi_feedkeys() {
+	text="$1"
+	text="${text//\\/\\\\\\\\}"
+	text="${text//\\\\\\\\</\\\\<}"
+	text="${text//\"/\\\\\\\"}"
+	printf '\033]51;["call","Tapi_TVT_Feedkeys",[%d,"%s","%s"]]\007' $TVT_REDRAW_SLEEP "$text" "$2"
+	TVT_FEEDING_KEYS=1
+	zle tvt.escape
+}
 #}}}
 
 #{{{ tvt.read()
@@ -72,8 +73,12 @@ tvt.escape() {
 	#}}}
 
 	while true; do
-		sleep $TVT_DRAW_SLEEP
-		[ -z "$TVT_TEST" ] && printf '\033]51;["call","Tapi_TVT_Escape",[%d]]\007' "$TVT_REDRAW_SLEEP"
+		if [ -z "$TVT_FEEDING_KEYS" ]; then
+			sleep $TVT_DRAW_SLEEP
+			[ -z "$TVT_TEST" ] && printf '\033]51;["call","Tapi_TVT_Escape",[%d]]\007' "$TVT_REDRAW_SLEEP"
+		else
+			TVT_FEEDING_KEYS=
+		fi
 		sleep $TVT_REDRAW_SLEEP_HERE
 		zle tvt.read || { zle reset-prompt; return 1; }
 		[ -n "$REPLY" ] || { zle reset-prompt; return 1; }

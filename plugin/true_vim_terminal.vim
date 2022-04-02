@@ -23,9 +23,40 @@ endfunc
 "}}}
 
 "{{{ Tapi_TVT_Feedkeys(string, mode)
-"function Tapi_TVT_Feedkeys(bufnum, arglist)
-"	exec "call feedkeys(\"" . a:arglist[0] . "\", \"" . a:arglist[1] . "\")"
-"endfunc
+function Tapi_TVT_Feedkeys(bufnum, arglist)
+	call Tapi_TVT_Escape(a:bufnum, [a:arglist[0]])
+	if match(a:arglist, '|\|"\|@') != -1
+		throw "[TVT] Illegal characters! Improve Tapi_TVT_Feedkeys to make this sequence work."
+	endif
+	let l:left=0
+	for l:part in matchlist(a:arglist[1], '^\([^>]*>\)*\(.\{-}\)$')[1:]
+		if l:part == ""
+			continue
+		endif
+		let l:part2=eval('"' . l:part . '"')
+		let l:keys=[]
+		let l:i=0
+		let l:len=strcharlen(l:part)
+		while l:i < l:len
+			if part[i] == l:part2[i]
+				let l:keys+=[l:part[i]]
+			else
+				let l:keys+=[l:part2[i:]]
+				break
+			endif
+			let l:i+=1
+		endwhile
+		for l:key in l:keys
+			if l:left
+				throw "[TVT] Tapi_TVT_Feedkeys entered an illegal mode!"
+			endif
+			call feedkeys(l:key, a:arglist[2] . "xc")
+			if index(["i", "c", "t"], mode()[0]) >= 0
+				let l:left=1
+			endif
+		endfor
+	endfor
+endfunc
 "}}}
 
 	"{{{ Tapi_TVT_Send(0, [t_ts, title, t_fs])
@@ -39,16 +70,21 @@ function Tapi_TVT_Send(bufnum, arglist)
 			throw "[TVT] Illegal characters! Improve Tapi_TVT_Send to make this sequence work."
 		endif
 	endif
+	if match(a:arglist[1] . a:arglist[3], '|\|"') != -1
+		throw "[TVT] Illegal characters! Improve Tapi_TVT_Send to make this sequence work."
+	endif
 	let l:t_ts=&t_ts
 	let l:t_fs=&t_fs
 	let l:titlestring=&titlestring
 	let l:title=&title
-	execute "set t_ts=" . a:arglist[1] . " t_fs=" . a:arglist[3] . " titlestring=" . a:arglist[2] | set title | redraw
-	execute "set t_ts=" . l:t_ts . " t_fs=" . l:t_fs . " titlestring=" . l:titlestring
+	execute "set t_ts=" . a:arglist[1] . " t_fs=" . a:arglist[3] | let &titlestring=a:arglist[2] | set title | redraw
+	set notitle
+	let &t_ts=l:t_ts
+	let &t_fs=l:t_fs
+	let &titlestring=l:titlestring
 	if l:title
+		set title
 		redraw
-	else
-		set notitle
 	endif
 endfunc
 	"}}}
@@ -247,12 +283,12 @@ function! Tapi_TVT_Paste(buf, arglist)
 
 	"{{{ remove all terminal mappings
 	try
-		let l:maps="\n" . substitute(substitute(execute("tmap"), '\nt\s*', '\n', "g"), '^\n*', '', "")
+		let l:maps="\n" . substitute(substitute(execute("tmap"), '\nt\s*', '\n', "g"), '^\n*', "", "")
 		let l:nl=0
 		while 1
 			let l:sp=stridx(l:maps, " ", l:nl)
 			try
-				execute "tunmap " . substitute(strcharpart(l:maps, l:nl+1, l:sp-l:nl-1), '|', '<bar>', "g")
+				execute "tunmap " . substitute(strcharpart(l:maps, l:nl+1, l:sp-l:nl-1), '|', "<bar>", "g")
 			catch /^.*E31:.*/
 			endtry
 			let l:nl=stridx(l:maps, "\n", l:sp)
@@ -268,7 +304,7 @@ endfunc
 
 "{{{ Tapi_TVT_NoPaste()
 function! Tapi_TVT_NoPaste(buf, arglist)
-	call TrueVimTerm_Start(0)
+	call TrueVimTerm_Start(a:buf, 0)
 endfunc
 "}}}
 
