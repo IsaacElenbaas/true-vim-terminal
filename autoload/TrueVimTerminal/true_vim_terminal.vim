@@ -27,8 +27,23 @@ endfunction
 "}}}
 
 "{{{ default bind functions
+	"{{{ a/Ai/I
+function TrueVimTerminal#true_vim_terminal#Insert(pos)
+	if !exists("b:TrueVimTerm_running")
+		call term_sendkeys(bufnr("%"),
+			\ "2" . a:pos . g:TrueVimTerm_delimiter .
+			\ "0" . g:TrueVimTerm_delimiter
+		\ )
+	endif
+	call feedkeys("i", "nx")
+endfunc
+	"}}}
+
 	"{{{ c/cc/C
 function TrueVimTerminal#true_vim_terminal#Change(mode)
+	if exists("b:TrueVimTerm_running")
+		throw "[TVT] A command is running!"
+	endif
 	let l:line=s:ParseLine(getline("."), a:mode)
 	call setreg(g:TrueVimTerm_register, l:line[2])
 	call feedkeys("i", "nx")
@@ -42,6 +57,9 @@ endfunc
 
 	"{{{ d/dd/D
 function TrueVimTerminal#true_vim_terminal#Delete(mode)
+	if exists("b:TrueVimTerm_running")
+		throw "[TVT] A command is running!"
+	endif
 	let l:line=s:ParseLine(getline("."), a:mode)
 	if g:TrueVimTerm_register != "_"
 		call setreg("-", l:line[2])
@@ -58,6 +76,9 @@ endfunc
 
 	"{{{ p/P
 function TrueVimTerminal#true_vim_terminal#Paste_after(mode)
+	if exists("b:TrueVimTerm_running")
+		throw "[TVT] A command is running!"
+	endif
 	let l:visual=(a:mode == visualmode())
 	if l:visual
 		let l:line=s:ParseLine(getline("."), a:mode)
@@ -90,6 +111,9 @@ endfunc
 
 	"{{{ r/R
 function TrueVimTerminal#true_vim_terminal#Replace(mode, count)
+	if exists("b:TrueVimTerm_running")
+		throw "[TVT] A command is running!"
+	endif
 	let l:line=s:ParseLine(getline("."))
 	let l:key=getchar()
 	if type(l:key) != 0
@@ -109,6 +133,9 @@ endfunc
 
 	"{{{ s/S
 function TrueVimTerminal#true_vim_terminal#Substitute(count)
+	if exists("b:TrueVimTerm_running")
+		throw "[TVT] A command is running!"
+	endif
 	call feedkeys("v" . ((a:count > 1) ? (a:count-1) . "l" : "") . "\<Esc>", "nx")
 	let l:line=s:ParseLine(getline("."), visualmode())
 	call setreg(g:TrueVimTerm_register, l:line[2])
@@ -123,6 +150,9 @@ endfunc
 
 	"{{{ x/X
 function TrueVimTerminal#true_vim_terminal#XDelete(count)
+	if exists("b:TrueVimTerm_running")
+		throw "[TVT] A command is running!"
+	endif
 	call feedkeys("v" . ((a:count > 1) ? (a:count-1) . "l" : "") . "\<Esc>", "nx")
 	let l:line=s:ParseLine(getline("."), visualmode())
 	call setreg(g:TrueVimTerm_register, l:line[2])

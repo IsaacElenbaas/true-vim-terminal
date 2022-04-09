@@ -135,15 +135,15 @@ tvt.escape() {
 TVT_DRAW_SLEEP="${TVT_DRAW_SLEEP:-1}"
 TVT_REDRAW_SLEEP="${TVT_REDRAW_SLEEP:-1}"
 if [ "${TVT_DELIMITER#*[!0-9]}" = "$TVT_DELIMITER" ]; then
-	printf '\033]51;["call","Tapi_TVT_Delimiter",[%d]]\007' ${TVT_DELIMITER:-31}
-	TVT_DELIMITER="$(printf "$(printf "\\%o" ${TVT_DELIMITER:-31})")"
 	if [ -n "$TVT_ESCAPE" ]; then
+		printf '\033]51;["call","Tapi_TVT_Init",[%d,"%s"]]\007' ${TVT_DELIMITER:-31} "$TVT_ESCAPE"
 		TVT_ESCAPE="${TVT_ESCAPE/^\[/\\033}"
 		TVT_ESCAPE="${TVT_ESCAPE/^/\\C-}"
 		bind -x "\"$TVT_ESCAPE\":tvt.escape"
 	else
 		printf "TVT_ESCAPE is not set!\n" >&2
 	fi
+	TVT_DELIMITER="$(printf "$(printf "\\%o" ${TVT_DELIMITER:-31})")"
 else
 	printf "TVT_DELIMITER is not a positive integer!\n" >&2
 fi

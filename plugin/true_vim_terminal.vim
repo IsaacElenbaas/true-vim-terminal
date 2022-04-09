@@ -4,17 +4,46 @@ endif
 if $TVT_DEMO != "" || $TVT_TEST != ""
 	let g:TrueVimTerm_prompt_regex='^\[TVT[^\]]*\].\s'
 endif
+if !exists("$TVT_DEMO")
+	let s:plugindir=expand('<sfile>:p:h:h')
+else
+	let s:plugindir=expand('<sfile>:p:h')
+endif
 
-"{{{ Tapi_TVT_Delimiter()
-function Tapi_TVT_Delimiter(bufnum, arglist)
-	let g:TrueVimTerm_delimiter=nr2char(a:arglist[0])
+"{{{ Tapi_TVT_Init(delimiter, escape)
+function Tapi_TVT_Init(bufnum, arglist)
+	if !exists("g:TrueVimTerm_delimiter")
+		let g:TrueVimTerm_delimiter=nr2char(a:arglist[0])
+		silent let g:TrueVimTerm_escape=system(s:plugindir . "/util/convert_key", a:arglist[1])
+		execute "tnoremap <buffer> <expr> " . g:TrueVimTerm_escape . " (term_sendkeys(" . a:bufnum . ",'" . g:TrueVimTerm_escape . "'))?\"\":\"\""
+	endif
 endfunc
 "}}}
 
-"{{{ Tapi_TVT_Escape()
+"{{{ Tapi_TVT_Running(key)
+function Tapi_TVT_Running(bufnum, arglist)
+	if !exists("b:TrueVimTerm_running_key")
+		let b:TrueVimTerm_running=1
+		let b:TrueVimTerm_running_key=a:arglist[0]
+		execute "tnoremap <buffer> " . g:TrueVimTerm_escape . " \<c-w>N"
+	else
+		if a:arglist[0] == b:TrueVimTerm_running_key
+			execute "tnoremap <buffer> <expr> " . g:TrueVimTerm_escape . " (term_sendkeys(" . a:bufnum . ",'" . g:TrueVimTerm_escape . "'))?\"\":\"\""
+			unlet b:TrueVimTerm_running_key
+		else
+			throw "[TVT] Invalid running key!"
+		endif
+	endif
+endfunc
+"}}}
+
+"{{{ Tapi_TVT_Escape(redraw_sleep)
 function Tapi_TVT_Escape(bufnum, arglist)
+	if exists("b:TrueVimTerm_running")
+		unlet b:TrueVimTerm_running
+	endif
 	if len(a:arglist) != 0 && a:arglist[0] != 0
-		call term_wait(bufnr("%"), a:arglist[0]*10)
+		call term_wait(a:bufnum, a:arglist[0]*10)
 	endif
 	if mode() == "t"
 		call feedkeys("\<c-w>N", "n")
@@ -24,6 +53,9 @@ endfunc
 
 "{{{ Tapi_TVT_Feedkeys(string, mode)
 function Tapi_TVT_Feedkeys(bufnum, arglist)
+	if exists("b:TrueVimTerm_running")
+		throw "[TVT] A command is running!"
+	endif
 	call Tapi_TVT_Escape(a:bufnum, [a:arglist[0]])
 	if match(a:arglist, '|\|"\|@') != -1
 		throw "[TVT] Illegal characters! Improve Tapi_TVT_Feedkeys to make this sequence work."
@@ -91,8 +123,8 @@ endfunc
 
 "{{{ default bind plugin mappings
 	"{{{ a/A
-nnoremap <silent> <script> <Plug>TrueVimTerm_a :<c-u>call term_sendkeys(bufnr("%"), "2" . (charcol(".")-TrueVimTerminal#true_vim_terminal#ParseLine(getline("."))[0]) . g:TrueVimTerm_delimiter . "0" . g:TrueVimTerm_delimiter)<CR>i
-nnoremap <silent> <script> <Plug>TrueVimTerm_A :<c-u>call term_sendkeys(bufnr("%"), "2" . strcharlen(TrueVimTerminal#true_vim_terminal#ParseLine(getline("."))[1]) . g:TrueVimTerm_delimiter . "0" . g:TrueVimTerm_delimiter)<CR>i
+nnoremap <silent> <script> <Plug>TrueVimTerm_a :<c-u>call TrueVimTerminal#true_vim_terminal#Insert(charcol(".")-TrueVimTerminal#true_vim_terminal#ParseLine(getline("."))[0])<CR>
+nnoremap <silent> <script> <Plug>TrueVimTerm_A :<c-u>call TrueVimTerminal#true_vim_terminal#Insert(strcharlen(TrueVimTerminal#true_vim_terminal#ParseLine(getline("."))[1]))<CR>
 map <Plug>(TrueVimTerm_a) <Plug>TrueVimTerm_a
 map <Plug>(TrueVimTerm_A) <Plug>TrueVimTerm_A
 	"}}}
@@ -118,8 +150,8 @@ map <Plug>(TrueVimTerm_D) <Plug>TrueVimTerm_D
 	"}}}
 
 	"{{{ i/I
-nnoremap <silent> <script> <Plug>TrueVimTerm_i :<c-u>call term_sendkeys(bufnr("%"), "2" . (charcol(".")-TrueVimTerminal#true_vim_terminal#ParseLine(getline("."))[0]-1) . g:TrueVimTerm_delimiter . "0" . g:TrueVimTerm_delimiter)<CR>i
-nnoremap <silent> <script> <Plug>TrueVimTerm_I :<c-u>call term_sendkeys(bufnr("%"), "2" . 0 . g:TrueVimTerm_delimiter . "0" . g:TrueVimTerm_delimiter)<CR>i
+nnoremap <silent> <script> <Plug>TrueVimTerm_i :<c-u>call TrueVimTerminal#true_vim_terminal#Insert(charcol(".")-TrueVimTerminal#true_vim_terminal#ParseLine(getline("."))[0]-1)<CR>
+nnoremap <silent> <script> <Plug>TrueVimTerm_I :<c-u>call TrueVimTerminal#true_vim_terminal#Insert(0)<CR>
 map <Plug>(TrueVimTerm_i) <Plug>TrueVimTerm_i
 map <Plug>(TrueVimTerm_I) <Plug>TrueVimTerm_I
 	"}}}
@@ -171,20 +203,19 @@ map <Plug>(TrueVimTerm_yy) <Plug>TrueVimTerm_yy
 
 "{{{ TrueVimTerm_Start(new)
 try
-	function TrueVimTerm_Start(buf, new)
-		tnoremap <buffer> <expr> <c-w> (term_sendkeys(bufnr("%"), "\<c-w>"))?"":""
+	function TrueVimTerm_Start(bufnum, new)
 
 	"{{{ reserve columns
 		" reserve columns for numbers, two for signs, and onemore
 		" may be removed after #8365
-		execute "setlocal termwinsize=0x" . (winwidth(bufwinid(a:buf))-(
+		execute "setlocal termwinsize=0x" . (winwidth(bufwinid(a:bufnum))-(
 			\ ((&number || &relativenumber) ? min([2, &numberwidth]) : 0)+
 			\ 2+
 			\ ((match(&virtualedit, 'onemore') != -1) ? 1 : 0)
 		\ ))
-		execute "augroup TrueVimTerm_Resize" . a:buf . " | " .
+		execute "augroup TrueVimTerm_Resize" . a:bufnum . " | " .
 			\ "autocmd!" . " | " .
-			\ "autocmd VimResized * execute \"setlocal termwinsize=0x\" . (winwidth(bufwinid(" . a:buf . "))-(" .
+			\ "autocmd VimResized * execute \"setlocal termwinsize=0x\" . (winwidth(bufwinid(" . a:bufnum . "))-(" .
 				\ "((&number || &relativenumber) ? min([2, &numberwidth]) : 0)+" .
 				\ "2+" .
 				\ "((match(&virtualedit, 'onemore') != -1) ? 1 : 0)" .
@@ -192,12 +223,13 @@ try
 		augroup END"
 	"}}}
 
+		tnoremap <buffer> <expr> <c-w> (term_sendkeys(a:bufnum, "\<c-w>"))?"":""
 		" no tmaps so only if new
 		if a:new
 			call TrueVimTerm_Mappings()
 		endif
 		try
-			call TrueVimTerm_Start_User(a:buf, a:new)
+			call TrueVimTerm_Start_User(a:bufnum, a:new)
 		catch /^.*E117:.*/
 		endtry
 		try
@@ -275,11 +307,10 @@ endfunc
 "}}}
 
 "{{{ Tapi_TVT_Paste()
-function! Tapi_TVT_Paste(buf, arglist)
-	tnoremap <buffer> <expr> <c-w> (term_sendkeys(bufnr("%"), "\<c-w>"))?"":""
+function! Tapi_TVT_Paste(bufnum, arglist)
 	" may be removed after #8365
 	set termwinsize=
-	execute "autocmd! TrueVimTerm_Resize" . a:buf
+	execute "autocmd! TrueVimTerm_Resize" . a:bufnum
 
 	"{{{ remove all terminal mappings
 	try
@@ -299,12 +330,15 @@ function! Tapi_TVT_Paste(buf, arglist)
 	catch /^.*E31:.*/
 	endtry
 	"}}}
+
+	tnoremap <buffer> <expr> <c-w> (term_sendkeys(a:bufnum, "\<c-w>"))?"":""
+	execute "tnoremap <buffer> <expr> " . g:TrueVimTerm_escape . " (term_sendkeys(" . a:bufnum . ",'" . g:TrueVimTerm_escape . "'))?\"\":\"\""
 endfunc
 "}}}
 
 "{{{ Tapi_TVT_NoPaste()
-function! Tapi_TVT_NoPaste(buf, arglist)
-	call TrueVimTerm_Start(a:buf, 0)
+function! Tapi_TVT_NoPaste(bufnum, arglist)
+	call TrueVimTerm_Start(a:bufnum, 0)
 endfunc
 "}}}
 

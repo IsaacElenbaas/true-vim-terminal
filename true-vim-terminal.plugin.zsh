@@ -29,6 +29,23 @@ tvt.tapi_feedkeys() {
 }
 #}}}
 
+#{{{ allow escape while running commands
+autoload -Uz add-zsh-hook
+TVT_RUNNING=""
+tvt.preexec() {
+	[ -z "$TVT_RUNNING" ] && {
+		TVT_RUNNING="$(shuf -er -n 10 {0..9} {A..Z} {a..z} | tr -d "\n")"
+		printf '\033]51;["call","Tapi_TVT_Running",["%s"]]\007' "$TVT_RUNNING"
+	}
+}
+add-zsh-hook preexec tvt.preexec
+tvt.precmd() {
+	[ -n "$TVT_RUNNING" ] && printf '\033]51;["call","Tapi_TVT_Running",["%s"]]\007' "$TVT_RUNNING"
+	TVT_RUNNING=""
+}
+add-zsh-hook precmd tvt.precmd
+#}}}
+
 #{{{ tvt.read()
 # based on https://github.com/zsh-users/zsh/blob/master/Functions/Zle/read-from-minibuffer
 tvt.read() {
@@ -142,13 +159,14 @@ zle -N tvt.escape_end
 TVT_DRAW_SLEEP="${TVT_DRAW_SLEEP:-1}"
 TVT_REDRAW_SLEEP="${TVT_REDRAW_SLEEP:-1}"
 if [ "${TVT_DELIMITER#*[!0-9]}" = "$TVT_DELIMITER" ]; then
-	printf '\033]51;["call","Tapi_TVT_Delimiter",[%d]]\007' ${TVT_DELIMITER:-31}
-	TVT_DELIMITER="$(printf "$(printf "\\%o" ${TVT_DELIMITER:-31})")"
 	if [ -n "$TVT_ESCAPE" ]; then
+		printf '\033]51;["call","Tapi_TVT_Init",[%d,"%s"]]\007' ${TVT_DELIMITER:-31} "$TVT_ESCAPE"
 		bindkey "$TVT_ESCAPE" tvt.escape
 	else
+		printf '\033]51;["call","Tapi_TVT_Init",[%d," "]]\007' ${TVT_DELIMITER:-31}
 		printf "\nTVT_ESCAPE is not set!" >&2
 	fi
+	TVT_DELIMITER="$(printf "$(printf "\\%o" ${TVT_DELIMITER:-31})")"
 	bindkey "$TVT_DELIMITER" tvt.escape_end
 	bindkey -s -M isearch "$TVT_DELIMITER" "\026$TVT_DELIMITER"
 else
