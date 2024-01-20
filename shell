@@ -18,7 +18,7 @@
 }
 # TerminalOpen isn't triggered with terminals started on startup, even on a VimEnter autocommand
 # VimEnter autocommand is to prevent shell from loading vim's default height of 24, then not getting the correct size once vim does because that doesn't trigger a resize
-vim -c 'set t_ti= t_te= | autocmd VimEnter * noswapfile call TrueVimTerm_Start(term_start(["'"${TVT_DEMO:-"$(
+vim -c 'set t_ts= t_fs= | autocmd VimEnter * noswapfile call TrueVimTerm_Start(term_start(["'"${TVT_DEMO:-"$(
 	command -v zsh &>/dev/null && printf "zsh" || printf "bash"
 )"}"'", "-i"'"$(
 	for i in "$@"; do
